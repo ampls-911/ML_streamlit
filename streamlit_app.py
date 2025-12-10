@@ -64,7 +64,7 @@ with st.sidebar:
     # Navigation
     page = st.radio(
         "Select Page:",
-        ["🏠 Home", "📊 Model Info", "🔮 Predict", "📁 Batch Predict"]
+        ["🏠 Home", "📊 Model Info", "📁 Batch Predict"]
     )
 
 # Main content
@@ -103,9 +103,8 @@ if page == "🏠 Home":
     st.markdown("""
     ---
     #### 🚀 Quick Start:
-    1. **Single Prediction**: Use the "Predict" tab to analyze individual network flows
-    2. **Batch Analysis**: Upload CSV files in the "Batch Predict" tab
-    3. **Model Info**: Learn more about the model in the "Model Info" tab
+    1. **Batch Analysis**: Upload CSV files in the "Batch Predict" tab
+    2. **Model Info**: Learn more about the model in the "Model Info" tab
     
     #### 📖 Dataset:
     Trained on **CICIDS2017** - Canadian Institute for Cybersecurity's comprehensive intrusion detection dataset.
@@ -169,107 +168,6 @@ elif page == "📊 Model Info":
         cols = st.columns(3)
         for idx, feature in enumerate(features):
             cols[idx % 3].write(f"• {feature}")
-
-elif page == "🔮 Predict":
-    # Single Prediction Page
-    st.title("🔮 Single Flow Prediction")
-    
-    if not model_package:
-        st.error("Model not loaded!")
-        st.stop()
-    
-    st.markdown("Enter network flow features to predict if traffic is BENIGN or ATTACK.")
-    
-    feature_names = model_package.get('feature_names', [])
-    
-    st.subheader("Enter Flow Features")
-    
-    with st.form("prediction_form"):
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            flow_duration = st.number_input("Flow Duration", value=120000)
-            total_fwd_packets = st.number_input("Total Fwd Packets", value=100)
-            total_bwd_packets = st.number_input("Total Backward Packets", value=50)
-            fwd_packet_length_mean = st.number_input("Fwd Packet Length Mean", value=1500.0)
-            bwd_packet_length_mean = st.number_input("Bwd Packet Length Mean", value=1000.0)
-        
-        with col2:
-            flow_bytes_s = st.number_input("Flow Bytes/s", value=125000.0)
-            flow_packets_s = st.number_input("Flow Packets/s", value=833.0)
-            flow_iat_mean = st.number_input("Flow IAT Mean", value=1200.0)
-            fwd_iat_total = st.number_input("Fwd IAT Total", value=120000.0)
-            bwd_iat_total = st.number_input("Bwd IAT Total", value=60000.0)
-        
-        submitted = st.form_submit_button("🔮 Predict", use_container_width=True)
-    
-    if submitted:
-        with st.spinner("Making prediction..."):
-            flow_data = {
-                'Flow Duration': flow_duration,
-                'Total Fwd Packets': total_fwd_packets,
-                'Total Backward Packets': total_bwd_packets,
-                'Fwd Packet Length Mean': fwd_packet_length_mean,
-                'Bwd Packet Length Mean': bwd_packet_length_mean,
-                'Flow Bytes/s': flow_bytes_s,
-                'Flow Packets/s': flow_packets_s,
-                'Flow IAT Mean': flow_iat_mean,
-                'Fwd IAT Total': fwd_iat_total,
-                'Bwd IAT Total': bwd_iat_total
-            }
-            
-            X = pd.DataFrame()
-            for feat in feature_names:
-                if feat in flow_data:
-                    X[feat] = [flow_data[feat]]
-                else:
-                    X[feat] = [0]
-            
-            model = model_package['model']
-            if model_package.get('scaling_required', False):
-                scaler = model_package['scaler']
-                X_scaled = scaler.transform(X)
-                prediction = model.predict(X_scaled)[0]
-                probabilities = model.predict_proba(X_scaled)[0]
-            else:
-                prediction = model.predict(X)[0]
-                probabilities = model.predict_proba(X)[0]
-            
-            label_encoder = model_package['label_encoder']
-            attack_name = label_encoder.inverse_transform([prediction])[0]
-            confidence = probabilities[prediction]
-            
-            st.markdown("---")
-            st.subheader("Prediction Results")
-            
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                if attack_name == "BENIGN":
-                    st.success(f"### ✅ {attack_name}")
-                    st.markdown("This traffic appears to be **normal and safe**.")
-                else:
-                    st.error(f"### ⚠️ {attack_name}")
-                    st.markdown("This traffic appears to be an **attack**!")
-            
-            with col2:
-                st.metric("Confidence", f"{confidence:.2%}")
-                
-                if confidence > 0.9:
-                    st.success("High confidence ✅")
-                elif confidence > 0.7:
-                    st.warning("Medium confidence ⚠️")
-                else:
-                    st.warning("Low confidence - Review manually ⚠️")
-            
-            # Simple bar chart using Streamlit
-            st.subheader("Class Probabilities")
-            label_names = model_package.get('label_names', ['BENIGN', 'ATTACK'])
-            prob_data = pd.DataFrame({
-                'Class': label_names,
-                'Probability': [probabilities[i] for i in range(len(label_names))]
-            })
-            st.bar_chart(prob_data.set_index('Class'))
 
 elif page == "📁 Batch Predict":
     # Batch Prediction Page
